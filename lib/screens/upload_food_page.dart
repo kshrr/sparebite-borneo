@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../app_colors.dart';
 import 'food_matching_page.dart';
+import 'map_picker_page.dart';
 
 class UploadFoodPage extends StatefulWidget {
   const UploadFoodPage({super.key});
@@ -145,12 +146,46 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
             backgroundColor: Color(0xFF8B5E34),
           ),
         );
-        Navigator.pop(context);
+        final nav = Navigator.of(context);
+        if (nav.canPop()) {
+          nav.pop(true);
+        }
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
       showError("Upload failed: $e");
+    }
+  }
+
+  Future<void> _pickFoodLocationOnMap() async {
+    final initialLat = double.tryParse(latitudeController.text.trim());
+    final initialLng = double.tryParse(longitudeController.text.trim());
+
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapPickerPage(
+          title: "Pick Food Location",
+          initialLatitude: initialLat,
+          initialLongitude: initialLng,
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    final lat = result["latitude"];
+    final lng = result["longitude"];
+    final label = result["label"];
+    if (lat is double && lng is double) {
+      setState(() {
+        latitudeController.text = lat.toStringAsFixed(6);
+        longitudeController.text = lng.toStringAsFixed(6);
+        if (locationController.text.trim().isEmpty && label is String) {
+          locationController.text = label;
+        }
+      });
     }
   }
 
@@ -245,6 +280,22 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
                 controller: locationController,
                 label: "Pickup Location",
                 icon: Icons.location_on_outlined,
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _pickFoodLocationOnMap,
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text("Pick Food Location on Google Map"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: appPrimaryGreen,
+                    side: BorderSide(color: appPrimaryGreen),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Row(

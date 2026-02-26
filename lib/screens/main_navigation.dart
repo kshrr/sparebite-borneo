@@ -11,7 +11,9 @@ import 'profile_page.dart';
 import 'upload_food_page.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  const MainNavigation({super.key, this.initialIndex = 0});
+
+  final int initialIndex;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -66,8 +68,15 @@ class _MainNavigationState extends State<MainNavigation> {
     setState(() {
       isNgoUser = isNGO;
       isLoadingRole = false;
-      currentIndex = 0;
+      currentIndex = _normalizedIndex(widget.initialIndex, isNGO);
     });
+  }
+
+  int _normalizedIndex(int index, bool isNgo) {
+    final max = isNgo ? ngoPages.length - 1 : donorPages.length - 1;
+    if (index < 0) return 0;
+    if (index > max) return 0;
+    return index;
   }
 
   void onTabTapped(int index) {

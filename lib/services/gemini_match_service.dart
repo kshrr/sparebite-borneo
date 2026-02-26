@@ -6,11 +6,12 @@ class GeminiMatchService {
   GeminiMatchService();
 
   // Insert your Gemini API key here.
-  static const String apiKey = "REMOVED_API_KEY";
+  static const String _placeholderApiKey = "REMOVED_API_KEY";
+  static const String apiKey = _placeholderApiKey;
   static const String _model = "gemini-1.5-flash";
 
   bool get isConfigured =>
-      apiKey.isNotEmpty && apiKey != "REMOVED_API_KEY";
+      apiKey.isNotEmpty && apiKey != _placeholderApiKey;
 
   Future<GeminiMatchResult?> rankNgoCandidates({
     required String foodName,
@@ -18,6 +19,7 @@ class GeminiMatchService {
     required int quantity,
     required double foodLat,
     required double foodLng,
+    required double expiryHoursRemaining,
     required List<Map<String, dynamic>> candidates,
   }) async {
     if (!isConfigured || candidates.isEmpty) return null;
@@ -37,6 +39,7 @@ Food listing:
 - Category: $category
 - Quantity: $quantity
 - Pickup coordinates: ($foodLat, $foodLng)
+- Expiry in hours: ${expiryHoursRemaining.toStringAsFixed(2)}
 
 Candidates JSON:
 ${jsonEncode(candidates)}

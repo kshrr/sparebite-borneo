@@ -18,7 +18,10 @@ class ProfilePage extends StatelessWidget {
     }
 
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance.collection("users").doc(user.uid).get(),
+      future: FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get(),
       builder: (context, userSnapshot) {
         if (userSnapshot.connectionState == ConnectionState.waiting) {
           return _loadingScaffold();
@@ -28,7 +31,8 @@ class ProfilePage extends StatelessWidget {
         final email = (userData["email"] ?? user.email ?? "").toString();
         final ngoStatus = (userData["ngoStatus"] ?? "none").toString();
         final isNgo = userData["isNGO"] == true || ngoStatus == "approved";
-        final ngoProfile = (userData["ngoProfile"] as Map<String, dynamic>?) ??
+        final ngoProfile =
+            (userData["ngoProfile"] as Map<String, dynamic>?) ??
             <String, dynamic>{};
 
         Query<Map<String, dynamic>> query = FirebaseFirestore.instance
@@ -79,7 +83,9 @@ class ProfilePage extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 34,
-                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  backgroundColor: Colors.white.withOpacity(
+                                    0.2,
+                                  ),
                                   child: Text(
                                     _initialFrom(email),
                                     style: const TextStyle(
@@ -147,7 +153,8 @@ class ProfilePage extends StatelessWidget {
                                 ),
                                 _row(
                                   "Registration No.",
-                                  ngoProfile["registrationNumber"]?.toString() ??
+                                  ngoProfile["registrationNumber"]
+                                          ?.toString() ??
                                       "Not set",
                                 ),
                                 _row(
@@ -166,8 +173,14 @@ class ProfilePage extends StatelessWidget {
                                       "Not set",
                                 ),
                                 _row(
+                                  "Capacity",
+                                  ngoProfile["dailyCapacity"]?.toString() ??
+                                      "Not set",
+                                ),
+                                _row(
                                   "Mission",
-                                  ngoProfile["mission"]?.toString() ?? "Not set",
+                                  ngoProfile["mission"]?.toString() ??
+                                      "Not set",
                                 ),
                               ],
                             ),
@@ -299,10 +312,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _detailCard({
-    required String title,
-    required List<Widget> rows,
-  }) {
+  Widget _detailCard({required String title, required List<Widget> rows}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -418,10 +428,7 @@ class ProfilePage extends StatelessWidget {
         icon: Icon(icon, color: color),
         label: Text(
           label,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: color, fontWeight: FontWeight.w700),
         ),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: color.withOpacity(0.25)),

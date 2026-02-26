@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
-import '../services/gemini_match_service.dart';
+import '../services/ngo_matching_service.dart';
+import 'main_navigation.dart';
 
 class FoodMatchingPage extends StatefulWidget {
   const FoodMatchingPage({
@@ -37,7 +37,7 @@ class FoodMatchingPage extends StatefulWidget {
 class _FoodMatchingPageState extends State<FoodMatchingPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-  final _gemini = GeminiMatchService();
+  final _matchingService = NgoMatchingService();
 
   bool _isMatching = true;
   int _stepIndex = 0;
@@ -52,8 +52,8 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
   final List<String> _steps = const [
     "Uploading food listing...",
     "Evaluating NGO capacity...",
-    "Calculating true geo distance...",
-    "Asking Gemini to rank priorities...",
+    "Calculating travel distance...",
+    "Applying Gemini priority ranking...",
   ];
 
   @override
@@ -111,13 +111,17 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
       _listingId = listingRef.id;
 
       await Future<void>.delayed(const Duration(milliseconds: 800));
-      final candidates = await _loadNgoCandidates(
-        quantityNeeded: _parseQuantity(widget.quantity),
+      final matchResult = await _matchingService.findBestNgo(
+        foodName: widget.foodName,
+        category: widget.category,
+        quantityText: widget.quantity,
         pickupLat: widget.pickupLatitude,
         pickupLng: widget.pickupLongitude,
+        expiryTime: widget.expiryTime,
+        donorId: user.uid,
       );
 
-      if (candidates.isEmpty) {
+      if (matchResult == null) {
         await listingRef.update({
           "status": "pending",
           "matchingState": "no_ngo_available",
@@ -134,46 +138,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
         return;
       }
 
-      final suitable = candidates.where((c) => c.isCapacitySuitable).toList();
-      final pool = suitable.isNotEmpty ? suitable : candidates;
-      pool.sort((a, b) {
-        final distanceCompare = a.distanceKm.compareTo(b.distanceKm);
-        if (distanceCompare != 0) return distanceCompare;
-        return b.remainingCapacity.compareTo(a.remainingCapacity);
-      });
-      _NgoCandidate best = pool.first;
-      String reason =
-          "Matched by capacity (${best.remainingCapacity} remaining) and nearest true distance (${best.distanceKm.toStringAsFixed(2)} km).";
-      int confidence = _buildConfidence(best);
-
-      final geminiRanking = await _gemini.rankNgoCandidates(
-        foodName: widget.foodName,
-        category: widget.category,
-        quantity: _parseQuantity(widget.quantity),
-        foodLat: widget.pickupLatitude,
-        foodLng: widget.pickupLongitude,
-        candidates: pool
-            .map((c) => {
-                  "ngoId": c.ngoId,
-                  "ngoName": c.ngoName,
-                  "distanceKm": c.distanceKm,
-                  "capacitySuitable": c.isCapacitySuitable,
-                  "remainingCapacity": c.remainingCapacity,
-                  "baseLatitude": c.baseLatitude,
-                  "baseLongitude": c.baseLongitude,
-                })
-            .toList(),
-      );
-
-      if (geminiRanking != null) {
-        final matchedByGemini = pool.where((c) => c.ngoId == geminiRanking.selectedNgoId);
-        if (matchedByGemini.isNotEmpty) {
-          best = matchedByGemini.first;
-          reason = geminiRanking.reason;
-          confidence = geminiRanking.confidence;
-        }
-      }
-
+      final best = matchResult.candidate;
       await listingRef.update({
         "status": "pending",
         "matchingState": "matched",
@@ -184,12 +149,13 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
         "matchedNgoBaseLongitude": best.baseLongitude,
         "capacitySuitable": best.isCapacitySuitable,
         "matchDistanceKm": best.distanceKm,
-        "matchConfidence": confidence,
-        "matchModel": geminiRanking == null
-            ? "RuleBased+Haversine v2"
-            : "Gemini+Haversine v2",
-        "matchingReason": reason,
+        "matchTravelTimeMinutes": best.travelTimeMinutes,
+        "matchDistanceSource": best.distanceSource,
+        "matchConfidence": matchResult.confidence,
+        "matchModel": matchResult.model,
+        "matchingReason": matchResult.reason,
         "ngoDecision": "waiting",
+        "rejectedNgoIds": <String>[],
       });
 
       if (!mounted) return;
@@ -197,134 +163,27 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
         _isMatching = false;
         _hasMatch = true;
         _matchedNgoName = best.ngoName;
-        _matchConfidence = confidence;
-        _matchingReason =
-            geminiRanking?.reason ??
-            (best.isCapacitySuitable
-                ? "Capacity requirement met, then nearest true-distance NGO selected."
-                : "No NGO had full capacity. Nearest NGO selected as fallback.");
+        _matchConfidence = matchResult.confidence;
+        _matchingReason = matchResult.reason;
       });
     } catch (e) {
+      if (_listingId != null) {
+        await _firestore.collection("food_listings").doc(_listingId).update({
+          "status": "pending",
+          "matchingState": "error",
+          "ngoDecision": "unassigned",
+          "matchingReason": "Matching failed: ${e.toString()}",
+        });
+      }
       if (!mounted) return;
       setState(() {
         _isMatching = false;
         _hasMatch = false;
-        _matchingReason = "Matching failed: $e";
+        _matchingReason = "Matching failed: ${e.toString()}";
       });
     }
   }
 
-  Future<List<_NgoCandidate>> _loadNgoCandidates({
-    required int quantityNeeded,
-    required double pickupLat,
-    required double pickupLng,
-  }) async {
-    final ngoSnapshot = await _firestore
-        .collection("users")
-        .where("ngoStatus", isEqualTo: "approved")
-        .get();
-
-    final List<_NgoCandidate> candidates = [];
-    for (final doc in ngoSnapshot.docs) {
-      final data = doc.data();
-      final profile = (data["ngoProfile"] as Map<String, dynamic>?) ?? {};
-      final ngoId = doc.id;
-      final ngoName = (profile["organizationName"] ?? "NGO Partner").toString();
-      final serviceArea = (profile["serviceArea"] ?? "").toString();
-      final baseLat = _parseDoubleValue(profile["baseLatitude"]);
-      final baseLng = _parseDoubleValue(profile["baseLongitude"]);
-      if (baseLat == null || baseLng == null) {
-        continue;
-      }
-      final dailyCapacityRaw = profile["dailyCapacity"];
-      final dailyCapacity = _parseIntValue(dailyCapacityRaw);
-
-      final assignedToday = await _assignedMealsToday(ngoId);
-      final remaining = dailyCapacity > 0 ? dailyCapacity - assignedToday : -1;
-      final suitable = dailyCapacity > 0 && remaining >= quantityNeeded;
-      final distanceKm = _haversineKm(
-        pickupLat,
-        pickupLng,
-        baseLat,
-        baseLng,
-      );
-
-      candidates.add(
-        _NgoCandidate(
-          ngoId: ngoId,
-          ngoName: ngoName,
-          serviceArea: serviceArea,
-          baseLatitude: baseLat,
-          baseLongitude: baseLng,
-          remainingCapacity: remaining,
-          isCapacitySuitable: suitable,
-          distanceKm: distanceKm,
-        ),
-      );
-    }
-
-    return candidates;
-  }
-
-  Future<int> _assignedMealsToday(String ngoId) async {
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-
-    final snapshot = await _firestore
-        .collection("food_listings")
-        .where("assignedNgoId", isEqualTo: ngoId)
-        .where("ngoActionAt", isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .get();
-
-    int total = 0;
-    for (final doc in snapshot.docs) {
-      final qty = (doc.data()["quantity"] ?? "").toString();
-      total += _parseQuantity(qty);
-    }
-    return total;
-  }
-
-  int _parseQuantity(String text) {
-    final match = RegExp(r"\d+").firstMatch(text);
-    if (match == null) return 0;
-    return int.tryParse(match.group(0) ?? "0") ?? 0;
-  }
-
-  int _parseIntValue(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    return int.tryParse(value.toString()) ?? 0;
-  }
-
-  double? _parseDoubleValue(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    return double.tryParse(value.toString());
-  }
-
-  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371.0;
-    final dLat = _toRadians(lat2 - lat1);
-    final dLon = _toRadians(lon2 - lon1);
-    final a =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(lat1)) *
-            math.cos(_toRadians(lat2)) *
-            math.sin(dLon / 2) *
-            math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    return r * c;
-  }
-
-  double _toRadians(double degrees) => degrees * math.pi / 180;
-
-  int _buildConfidence(_NgoCandidate candidate) {
-    final distanceComponent = (1 / (1 + candidate.distanceKm)).clamp(0.0, 1.0);
-    final distancePoints = (distanceComponent * 35).round();
-    final capacityPoints = candidate.isCapacitySuitable ? 60 : 30;
-    return (capacityPoints + distancePoints).clamp(50, 98);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +322,14 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => Navigator.pop(context, _listingId != null),
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => const MainNavigation(initialIndex: 0),
+                ),
+                (route) => false,
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: appPrimaryGreen,
               foregroundColor: Colors.white,
@@ -481,26 +347,4 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
       ],
     );
   }
-}
-
-class _NgoCandidate {
-  const _NgoCandidate({
-    required this.ngoId,
-    required this.ngoName,
-    required this.serviceArea,
-    required this.baseLatitude,
-    required this.baseLongitude,
-    required this.remainingCapacity,
-    required this.isCapacitySuitable,
-    required this.distanceKm,
-  });
-
-  final String ngoId;
-  final String ngoName;
-  final String serviceArea;
-  final double baseLatitude;
-  final double baseLongitude;
-  final int remainingCapacity;
-  final bool isCapacitySuitable;
-  final double distanceKm;
 }

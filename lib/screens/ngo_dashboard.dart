@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
+import '../services/ngo_matching_service.dart';
 import 'login.dart';
 
 class NgoDashboard extends StatefulWidget {
@@ -15,6 +16,7 @@ class NgoDashboard extends StatefulWidget {
 class _NgoDashboardState extends State<NgoDashboard> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+  final _matchingService = NgoMatchingService();
   bool _isActionLoading = false;
   String _ngoName = "NGO Partner";
 
@@ -55,6 +57,7 @@ class _NgoDashboardState extends State<NgoDashboard> {
       await _firestore.collection("food_listings").doc(listingId).update({
         "status": "assigned",
         "assignedNgoId": uid,
+        "assignedNgoName": _ngoName,
         "ngoDecision": "accepted",
         "ngoActionAt": Timestamp.now(),
       });
@@ -71,13 +74,13 @@ class _NgoDashboardState extends State<NgoDashboard> {
 
     setState(() => _isActionLoading = true);
     try {
+      await _matchingService.rematchListing(
+        listingId: listingId,
+        rejectedByNgoId: uid,
+        donorRequested: false,
+        skipCurrentMatchedNgo: false,
+      );
       await _firestore.collection("food_listings").doc(listingId).update({
-        "rejectedNgoIds": FieldValue.arrayUnion([uid]),
-        "matchedNgoId": null,
-        "matchedNgoName": null,
-        "matchingState": "rejected_by_ngo",
-        "status": "pending",
-        "ngoDecision": "rejected",
         "ngoActionAt": Timestamp.now(),
       });
     } finally {
@@ -224,7 +227,6 @@ class _NgoDashboardState extends State<NgoDashboard> {
       stream: _firestore
           .collection("food_listings")
           .where("status", isEqualTo: "pending")
-          .where("matchedNgoId", isEqualTo: uid)
           .limit(30)
           .snapshots(),
       builder: (context, snapshot) {
@@ -236,14 +238,15 @@ class _NgoDashboardState extends State<NgoDashboard> {
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyCard("No pending food matches right now.");
-        }
-
-        final items = snapshot.data!.docs;
+        final items = (snapshot.data?.docs ?? <QueryDocumentSnapshot>[])
+            .where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return (data["matchedNgoId"] ?? "").toString() == uid;
+            })
+            .toList();
 
         if (items.isEmpty) {
-          return _buildEmptyCard("No new matches left for your NGO.");
+          return _buildEmptyCard("No pending food matches right now.");
         }
 
         return Column(
@@ -273,7 +276,6 @@ class _NgoDashboardState extends State<NgoDashboard> {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
           .collection("food_listings")
-          .where("status", isEqualTo: "assigned")
           .where("assignedNgoId", isEqualTo: uid)
           .limit(20)
           .snapshots(),
@@ -282,12 +284,19 @@ class _NgoDashboardState extends State<NgoDashboard> {
           return const SizedBox.shrink();
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        final items = (snapshot.data?.docs ?? <QueryDocumentSnapshot>[])
+            .where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return (data["status"] ?? "").toString() == "assigned";
+            })
+            .toList();
+
+        if (items.isEmpty) {
           return _buildEmptyCard("Accepted pickups will appear here.");
         }
 
         return Column(
-          children: snapshot.data!.docs.map((doc) {
+          children: items.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -491,4 +500,3 @@ class _MatchCard extends StatelessWidget {
     );
   }
 }
-

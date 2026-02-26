@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import 'login.dart';
+import 'map_picker_page.dart';
 
 class NgoApplicationPage extends StatefulWidget {
   const NgoApplicationPage({super.key});
@@ -119,6 +120,32 @@ class _NgoApplicationPageState extends State<NgoApplicationPage> {
     }
   }
 
+  Future<void> _pickNgoBaseOnMap() async {
+    final initialLat = double.tryParse(_baseLatitudeController.text.trim());
+    final initialLng = double.tryParse(_baseLongitudeController.text.trim());
+
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapPickerPage(
+          title: "Pick NGO Base Location",
+          initialLatitude: initialLat,
+          initialLongitude: initialLng,
+        ),
+      ),
+    );
+
+    if (result == null) return;
+    final lat = result["latitude"];
+    final lng = result["longitude"];
+    if (lat is double && lng is double) {
+      setState(() {
+        _baseLatitudeController.text = lat.toStringAsFixed(6);
+        _baseLongitudeController.text = lng.toStringAsFixed(6);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,6 +247,23 @@ class _NgoApplicationPageState extends State<NgoApplicationPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _pickNgoBaseOnMap,
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text("Pick NGO Base on Google Map"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: appPrimaryGreen,
+                    side: BorderSide(color: appPrimaryGreen),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               _buildField(
                 controller: _dailyCapacityController,
                 label: "Daily Capacity (meals)",

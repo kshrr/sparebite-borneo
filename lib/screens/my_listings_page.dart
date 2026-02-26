@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../app_colors.dart';
+import '../services/ngo_matching_service.dart';
 
 class MyListingsPage extends StatefulWidget {
   const MyListingsPage({super.key});
@@ -221,13 +222,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
-          ),
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
         ],
       );
     }
@@ -353,7 +348,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
   }
 }
 
-class PremiumListingCard extends StatelessWidget {
+class PremiumListingCard extends StatefulWidget {
   final Map<String, dynamic> data;
   final String docId;
 
@@ -364,7 +359,51 @@ class PremiumListingCard extends StatelessWidget {
   });
 
   @override
+  State<PremiumListingCard> createState() => _PremiumListingCardState();
+}
+
+class _PremiumListingCardState extends State<PremiumListingCard> {
+  final _matchingService = NgoMatchingService();
+  bool _isRematching = false;
+
+  Future<void> _handleRematch() async {
+    if (_isRematching) return;
+    setState(() => _isRematching = true);
+    try {
+      final matched = await _matchingService.rematchListing(
+        listingId: widget.docId,
+        donorRequested: true,
+        skipCurrentMatchedNgo: true,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            matched
+                ? "Rematch complete. Listing reassigned to the next suitable NGO."
+                : "No more eligible NGOs available right now.",
+          ),
+          backgroundColor: matched ? appPrimaryGreen : Colors.orange,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Rematch failed. Please try again."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRematching = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final data = widget.data;
     final expiryTime = data["expiryTime"] != null
         ? (data["expiryTime"] as Timestamp).toDate()
         : null;
@@ -376,6 +415,13 @@ class PremiumListingCard extends StatelessWidget {
     final quantity = data["quantity"] ?? "-";
     final location = data["location"] ?? "-";
     final category = data["category"] ?? "Others";
+    final assignedNgoName =
+        data["assignedNgoName"] ?? data["matchedNgoName"] ?? "-";
+    final matchedNgoId = (data["matchedNgoId"] ?? "").toString();
+    final matchingState = (data["matchingState"] ?? "").toString();
+    final rejectedNgoCount = (data["rejectedNgoIds"] as List?)?.length ?? 0;
+    final canManualRematch =
+        status.toString().toLowerCase() == "pending" && matchedNgoId.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -395,10 +441,9 @@ class PremiumListingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Image Section - Fixed Height
-            SizedBox(
-              height: 220,
-              width: double.infinity,
+            // Image Section - 1:1 for full preview
+            AspectRatio(
+              aspectRatio: 1,
               child: Stack(
                 children: [
                   // Food Image
@@ -572,6 +617,69 @@ class PremiumListingCard extends StatelessWidget {
                       "Status",
                       status.toUpperCase(),
                       color: _getStatusColor(status),
+                    ),
+                  ],
+                  if (status.toString().toLowerCase() == "assigned" &&
+                      assignedNgoName.toString().trim().isNotEmpty &&
+                      assignedNgoName != "-") ...[
+                    const SizedBox(height: 12),
+                    _buildInfoRow(
+                      Icons.volunteer_activism_rounded,
+                      "Assigned NGO",
+                      assignedNgoName.toString(),
+                      color: appPrimaryGreen,
+                    ),
+                  ],
+                  if (status.toString().toLowerCase() == "pending" &&
+                      assignedNgoName.toString().trim().isNotEmpty &&
+                      assignedNgoName != "-") ...[
+                    const SizedBox(height: 12),
+                    _buildInfoRow(
+                      Icons.groups_rounded,
+                      "Matched NGO",
+                      assignedNgoName.toString(),
+                      color: appPrimaryGreen,
+                    ),
+                  ],
+                  if (rejectedNgoCount > 0 ||
+                      matchingState == "rematched_after_reject" ||
+                      matchingState == "no_ngo_after_reject") ...[
+                    const SizedBox(height: 12),
+                    _buildInfoRow(
+                      Icons.swap_horiz_rounded,
+                      "Matching Update",
+                      matchingState == "no_ngo_after_reject"
+                          ? "Rejected by $rejectedNgoCount NGO(s). No more NGO available yet."
+                          : "Rejected by $rejectedNgoCount NGO(s). Reassigned to next NGO.",
+                      color: Colors.orange,
+                    ),
+                  ],
+                  if (canManualRematch) ...[
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isRematching ? null : _handleRematch,
+                        icon: _isRematching
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.swap_horiz_rounded),
+                        label: Text(
+                          _isRematching ? "Rematching..." : "Rematch",
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: appPrimaryGreen,
+                          side: BorderSide(color: appPrimaryGreen),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -878,4 +986,3 @@ class PremiumListingCard extends StatelessWidget {
     }
   }
 }
-

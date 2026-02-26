@@ -1,1 +1,28 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"food-rescue-2326e","appId":"1:943494248130:android:d9d58bcee59c5e0c582d5b","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"food-rescue-2326e","configurations":{"android":"1:943494248130:android:d9d58bcee59c5e0c582d5b","ios":"1:943494248130:ios:f0f988f461be3dbc582d5b","macos":"1:943494248130:ios:f0f988f461be3dbc582d5b","web":"1:943494248130:web:906b56ab6a7a03e2582d5b","windows":"1:943494248130:web:9ae1ac2724657c0b582d5b"}}}}}}
+{
+  "functions": {
+    "source": "functions"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "food-rescue-2326e",
+          "appId": "1:943494248130:android:d9d58bcee59c5e0c582d5b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "food-rescue-2326e",
+          "configurations": {
+            "android": "1:943494248130:android:d9d58bcee59c5e0c582d5b",
+            "ios": "1:943494248130:ios:f0f988f461be3dbc582d5b",
+            "macos": "1:943494248130:ios:f0f988f461be3dbc582d5b",
+            "web": "1:943494248130:web:906b56ab6a7a03e2582d5b",
+            "windows": "1:943494248130:web:9ae1ac2724657c0b582d5b"
+          }
+        }
+      }
+    }
+  }
+}
