@@ -1,17 +1,16 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiMatchService {
   GeminiMatchService();
 
   // Insert your Gemini API key here.
-  static const String _placeholderApiKey = "REMOVED_API_KEY";
-  static const String apiKey = _placeholderApiKey;
+  static final String apiKey = dotenv.env['GEMINI_API_KEY'] ?? "";  
   static const String _model = "gemini-1.5-flash";
 
-  bool get isConfigured =>
-      apiKey.isNotEmpty && apiKey != _placeholderApiKey;
+  bool get isConfigured => apiKey.isNotEmpty;
 
   Future<GeminiMatchResult?> rankNgoCandidates({
     required String foodName,

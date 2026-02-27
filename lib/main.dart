@@ -3,11 +3,19 @@ import 'app_colors.dart';
 import 'screens/homepage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Load .env first
+  await dotenv.load(fileName: ".env");
+
+  print("GEMINI KEY: ${dotenv.env['GEMINI_API_KEY']}");
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const FoodRescueApp());
 }
@@ -25,3 +33,5 @@ class FoodRescueApp extends StatelessWidget {
     );
   }
 }
+
+
