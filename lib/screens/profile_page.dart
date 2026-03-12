@@ -57,7 +57,7 @@ class ProfilePage extends StatelessWidget {
                 .length;
 
             return Scaffold(
-              backgroundColor: const Color(0xFFF8F4EF),
+              backgroundColor: const Color(0xFFF7FAFF),
               body: CustomScrollView(
                 slivers: [
                   SliverAppBar(
@@ -69,7 +69,7 @@ class ProfilePage extends StatelessWidget {
                       background: Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Color(0xFFA67C52), Color(0xFF8B5E34)],
+                            colors: [Color(0xFF3B82F6), Color(0xFF155EEF)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -205,7 +205,7 @@ class ProfilePage extends StatelessWidget {
     return const Scaffold(
       body: Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
         ),
       ),
     );
@@ -248,7 +248,7 @@ class ProfilePage extends StatelessWidget {
                   isNgo ? "Verified NGO Account" : "Donor Account",
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF2D3436),
+                    color: Color(0xFF0F1E42),
                     fontSize: 16,
                   ),
                 ),
@@ -293,7 +293,7 @@ class ProfilePage extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              color: Color(0xFF2D3436),
+              color: Color(0xFF0F1E42),
               fontWeight: FontWeight.bold,
               fontSize: 22,
             ),
@@ -335,7 +335,7 @@ class ProfilePage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF2D3436),
+              color: Color(0xFF0F1E42),
             ),
           ),
           const SizedBox(height: 10),
@@ -365,7 +365,7 @@ class ProfilePage extends StatelessWidget {
             child: Text(
               value,
               style: const TextStyle(
-                color: Color(0xFF2D3436),
+                color: Color(0xFF0F1E42),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -475,3 +475,4 @@ class ProfilePage extends StatelessWidget {
     return "${monthNames[createdAt.month - 1]} ${createdAt.day}, ${createdAt.year}";
   }
 }
+

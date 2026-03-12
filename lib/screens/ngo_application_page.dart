@@ -98,7 +98,7 @@ class _NgoApplicationPageState extends State<NgoApplicationPage> {
           content: Text(
             "NGO profile approved. Please log in again to access NGO dashboard.",
           ),
-          backgroundColor: Color(0xFF8B5E34),
+          backgroundColor: Color(0xFF155EEF),
         ),
       );
 
@@ -149,7 +149,7 @@ class _NgoApplicationPageState extends State<NgoApplicationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F4EF),
+      backgroundColor: const Color(0xFFF7FAFF),
       appBar: AppBar(
         title: const Text("NGO Application"),
         backgroundColor: appPrimaryGreen,
@@ -168,7 +168,7 @@ class _NgoApplicationPageState extends State<NgoApplicationPage> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFA67C52), Color(0xFF8B5E34)],
+                    colors: [Color(0xFF3B82F6), Color(0xFF155EEF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -345,10 +345,11 @@ class _NgoApplicationPageState extends State<NgoApplicationPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFA67C52), width: 2),
+            borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
           ),
         ),
       ),
     );
   }
 }
+

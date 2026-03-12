@@ -45,6 +45,9 @@ dependencies:
   google_maps_flutter: ^2.9.0
   geolocator: ^10.1.0
   flutter_dotenv: ^6.0.0
+  mobile_scanner: ^7.1.2
+  qr_flutter: ^4.1.0
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

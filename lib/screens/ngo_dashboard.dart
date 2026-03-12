@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../services/ngo_matching_service.dart';
+import '../widgets/future_ui.dart';
 import 'login.dart';
+import 'ngo_pickup_detail_screen.dart';
 
 class NgoDashboard extends StatefulWidget {
   const NgoDashboard({super.key});
@@ -93,101 +95,237 @@ class _NgoDashboardState extends State<NgoDashboard> {
   @override
   Widget build(BuildContext context) {
     final uid = _auth.currentUser?.uid;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F4EF),
-      body: RefreshIndicator(
-        color: appPrimaryGreen,
-        onRefresh: _loadNgoName,
-        child: CustomScrollView(
-          slivers: [
+      backgroundColor: appSurface,
+      body: FutureBackground(
+        child: RefreshIndicator(
+          color: appPrimaryGreen,
+          onRefresh: _loadNgoName,
+          child: CustomScrollView(
+            slivers: [
             SliverAppBar(
               pinned: true,
-              expandedHeight: 140,
+              expandedHeight: 200,
               elevation: 0,
               backgroundColor: appPrimaryGreen,
               flexibleSpace: FlexibleSpaceBar(
-                title: const Text(
-                  "NGO Command Center",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18,
-                  ),
-                ),
                 background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFA67C52), Color(0xFF8B5E34)],
-                    ),
+                  padding: const EdgeInsets.fromLTRB(16, 70, 16, 14),
+                  decoration: const BoxDecoration(gradient: appHeroGradient),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "NGO Command Center",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _ngoName,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildOverviewStats(uid),
+                    ],
                   ),
                 ),
               ),
               actions: [
                 IconButton(
                   onPressed: _logout,
-                  icon: const Icon(Icons.logout, color: Colors.white),
+                  icon: const Icon(Icons.logout_rounded, color: Colors.white),
                 ),
               ],
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 90),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeaderCard(),
-                    const SizedBox(height: 22),
-                    _buildSectionTitle("Matched Food", Icons.local_dining),
+                    _buildInfoBanner(),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle("Matched Food", Icons.local_dining_rounded),
                     const SizedBox(height: 10),
                     _buildPendingMatches(uid),
-                    const SizedBox(height: 22),
-                    _buildSectionTitle("Accepted Pickups", Icons.task_alt),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle("Accepted Pickups", Icons.qr_code_2_rounded),
                     const SizedBox(height: 10),
                     _buildAcceptedPickups(uid),
-                    const SizedBox(height: 90),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle("Past Pickups", Icons.history_rounded),
+                    const SizedBox(height: 10),
+                    _buildPastPickups(uid),
                   ],
                 ),
               ),
             ),
           ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeaderCard() {
+  Widget _buildOverviewStats(String? uid) {
+    if (uid == null) {
+      return const SizedBox.shrink();
+    }
+
+    final pendingStream = _firestore
+        .collection("food_listings")
+        .where("status", isEqualTo: "pending")
+        .limit(50)
+        .snapshots();
+    final acceptedStream = _firestore
+        .collection("food_listings")
+        .where("assignedNgoId", isEqualTo: uid)
+        .limit(50)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: pendingStream,
+      builder: (context, pendingSnap) {
+        final pendingCount = (pendingSnap.data?.docs ?? <QueryDocumentSnapshot>[])
+            .where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return (data["matchedNgoId"] ?? "").toString() == uid;
+            })
+            .length;
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: acceptedStream,
+          builder: (context, acceptedSnap) {
+            final acceptedCount =
+                (acceptedSnap.data?.docs ?? <QueryDocumentSnapshot>[])
+                    .where((doc) {
+                      final status =
+                          ((doc.data() as Map<String, dynamic>)["status"] ?? "")
+                              .toString()
+                              .toLowerCase();
+                      return status == "assigned" ||
+                          status == "accepted" ||
+                          status == "ready_for_pickup" ||
+                          status == "picked_up";
+                    })
+                    .length;
+            final deliveredCount =
+                (acceptedSnap.data?.docs ?? <QueryDocumentSnapshot>[])
+                    .where((doc) {
+                      final status =
+                          ((doc.data() as Map<String, dynamic>)["status"] ?? "")
+                              .toString()
+                              .toLowerCase();
+                      return status == "delivered" || status == "completed";
+                    })
+                    .length;
+
+            return Row(
+              children: [
+                Expanded(
+                  child: _buildStatPill(
+                    "Pending",
+                    "$pendingCount",
+                    Icons.pending_actions_rounded,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatPill(
+                    "Accepted",
+                    "$acceptedCount",
+                    Icons.task_alt_rounded,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatPill(
+                    "Delivered",
+                    "$deliveredCount",
+                    Icons.done_all_rounded,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStatPill(String label, String value, IconData icon) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+        color: Colors.white.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 16),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildInfoBanner() {
+    return FutureCard(
+      padding: const EdgeInsets.all(14),
+      child: Row(
         children: [
-          Text(
-            _ngoName,
-            style: const TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D3436),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: appPrimaryGreenLightBg,
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(Icons.info_outline_rounded, color: appPrimaryGreen),
           ),
-          const SizedBox(height: 8),
-          Text(
-            "Review food matches and accept pickups for your team.",
-            style: TextStyle(color: Colors.grey.shade700),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              "Accepted pickup cards are clickable. Open one to view full details and show pickup QR/code to the donor.",
+              style: TextStyle(fontSize: 12.5, color: appTextPrimary),
+            ),
           ),
         ],
       ),
@@ -195,27 +333,7 @@ class _NgoDashboardState extends State<NgoDashboard> {
   }
 
   Widget _buildSectionTitle(String title, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: appPrimaryGreenLightBg,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: appPrimaryGreen, size: 20),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF2D3436),
-          ),
-        ),
-      ],
-    );
+    return FutureSectionHeader(title: title, icon: icon);
   }
 
   Widget _buildPendingMatches(String? uid) {
@@ -233,7 +351,7 @@ class _NgoDashboardState extends State<NgoDashboard> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
+              valueColor: AlwaysStoppedAnimation<Color>(appPrimaryGreen),
             ),
           );
         }
@@ -286,8 +404,14 @@ class _NgoDashboardState extends State<NgoDashboard> {
 
         final items = (snapshot.data?.docs ?? <QueryDocumentSnapshot>[])
             .where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return (data["status"] ?? "").toString() == "assigned";
+              final status =
+                  (((doc.data() as Map<String, dynamic>)["status"] ?? ""))
+                      .toString()
+                      .toLowerCase();
+              return status == "assigned" ||
+                  status == "accepted" ||
+                  status == "ready_for_pickup" ||
+                  status == "picked_up";
             })
             .toList();
 
@@ -298,30 +422,159 @@ class _NgoDashboardState extends State<NgoDashboard> {
         return Column(
           children: items.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: FutureCard(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NgoPickupDetailScreen(
+                        listingId: doc.id,
+                        ngoId: uid,
+                      ),
+                    ),
+                  );
+                },
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: appPrimaryGreenLightBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.qr_code_2_rounded, color: appPrimaryGreen),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (data["foodName"] ?? "Food Item") as String,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "${data["quantity"] ?? "N/A"} - ${data["location"] ?? "Pickup point"}",
+                            style: const TextStyle(
+                              color: appTextMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: appPrimaryGreenLightBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            "Open",
+                            style: TextStyle(
+                              color: appPrimaryGreen,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "Details + QR",
+                          style: const TextStyle(
+                            color: appTextMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildPastPickups(String? uid) {
+    if (uid == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection("food_listings")
+          .where("assignedNgoId", isEqualTo: uid)
+          .limit(30)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+
+        final items = (snapshot.data?.docs ?? <QueryDocumentSnapshot>[])
+            .where((doc) {
+              final status =
+                  (((doc.data() as Map<String, dynamic>)["status"] ?? ""))
+                      .toString()
+                      .toLowerCase();
+              return status == "delivered" || status == "completed";
+            })
+            .toList();
+
+        if (items.isEmpty) {
+          return _buildEmptyCard("No past pickups yet.");
+        }
+
+        return Column(
+          children: items.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data["status"] ?? "").toString().toLowerCase();
+            return FutureCard(
+              padding: const EdgeInsets.all(14),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => NgoPickupDetailScreen(
+                      listingId: doc.id,
+                      ngoId: uid,
+                    ),
+                  ),
+                );
+              },
               child: Row(
                 children: [
                   Container(
-                    width: 42,
-                    height: 42,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: appPrimaryGreenLightBg,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.local_shipping, color: appPrimaryGreen),
+                    child: Icon(
+                      status == "completed"
+                          ? Icons.verified_rounded
+                          : Icons.done_all_rounded,
+                      color: appPrimaryGreen,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -329,35 +582,39 @@ class _NgoDashboardState extends State<NgoDashboard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (data["foodName"] ?? "Food Item") as String,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          (data["foodName"] ?? "Food Item").toString(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: appTextPrimary,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "${data["quantity"] ?? "N/A"} • ${data["location"] ?? "Pickup point"}",
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
+                          "${data["quantity"] ?? "N/A"} - ${data["pickup_location"] ?? data["location"] ?? "Pickup point"}",
+                          style: const TextStyle(
+                            color: appTextMuted,
                             fontSize: 12,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: appPrimaryGreenLightBg,
-                      borderRadius: BorderRadius.circular(12),
+                      color: appPrimaryGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      "Accepted",
-                      style: TextStyle(
+                      status == "completed" ? "COMPLETED" : "DELIVERED",
+                      style: const TextStyle(
                         color: appPrimaryGreen,
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ),
@@ -371,16 +628,11 @@ class _NgoDashboardState extends State<NgoDashboard> {
   }
 
   Widget _buildEmptyCard(String message) {
-    return Container(
-      width: double.infinity,
+    return FutureCard(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Text(
         message,
-        style: TextStyle(color: Colors.grey.shade700),
+        style: const TextStyle(color: appTextMuted),
       ),
     );
   }
@@ -409,20 +661,10 @@ class _MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: FutureCard(
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -432,8 +674,8 @@ class _MatchCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
                   color: appPrimaryGreenLightBg,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.fastfood_rounded, color: appPrimaryGreen),
               ),
@@ -451,19 +693,21 @@ class _MatchCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            "$quantity • $category",
+            "$quantity - $category",
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
-          Text(location, style: TextStyle(color: Colors.grey.shade700)),
+          Text(location, style: const TextStyle(color: appTextMuted)),
           const SizedBox(height: 4),
           Text(
             expiryTime == null
                 ? "Expiry not provided"
-                : "Expires: ${expiryTime!.toLocal().toString().substring(0, 16)}",
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                : "Expires: ${expiryTime!.toLocal().toString().length >= 16 ? expiryTime!.toLocal().toString().substring(0, 16) : expiryTime!.toLocal().toString()}",
+            style: const TextStyle(color: appTextMuted, fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -473,7 +717,7 @@ class _MatchCard extends StatelessWidget {
                     backgroundColor: appPrimaryGreen,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text("Accept"),
@@ -487,7 +731,7 @@ class _MatchCard extends StatelessWidget {
                     foregroundColor: appPrimaryGreen,
                     side: BorderSide(color: appPrimaryGreen),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text("Reject"),
@@ -496,6 +740,7 @@ class _MatchCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

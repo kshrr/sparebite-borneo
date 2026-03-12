@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
+import '../services/food_impact_service.dart';
 import '../services/ngo_matching_service.dart';
+import '../widgets/donation_success_impact_card.dart';
 import 'main_navigation.dart';
 
 class FoodMatchingPage extends StatefulWidget {
@@ -38,6 +40,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   final _matchingService = NgoMatchingService();
+  final _foodImpactService = FoodImpactService();
 
   bool _isMatching = true;
   int _stepIndex = 0;
@@ -48,6 +51,10 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
   String? _matchingReason;
   int? _matchConfidence;
   bool _hasMatch = false;
+
+  bool _isLoadingImpact = false;
+  bool _impactAttempted = false;
+  FoodImpactResult? _impactResult;
 
   final List<String> _steps = const [
     "Uploading food listing...",
@@ -109,6 +116,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
         "ngoDecision": "waiting",
       });
       _listingId = listingRef.id;
+      unawaited(_triggerImpactCalculation(user));
 
       await Future<void>.delayed(const Duration(milliseconds: 800));
       final matchResult = await _matchingService.findBestNgo(
@@ -184,11 +192,109 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
     }
   }
 
+  Future<void> _triggerImpactCalculation(User user) async {
+    if (_impactAttempted) return;
+    _impactAttempted = true;
+
+    if (!_foodImpactService.isConfigured) return;
+    final listingId = _listingId;
+    if (listingId == null) return;
+
+    final portionCount = _parsePortionCount(widget.quantity);
+    if (portionCount <= 0) return;
+
+    setState(() {
+      _isLoadingImpact = true;
+    });
+
+    try {
+      final detectedFoodType = await _foodImpactService.detectFoodType(
+        imageBase64: widget.imageBase64,
+        fallbackDescription: "${widget.foodName} ${widget.category}",
+      );
+
+      final result = await _foodImpactService.calculateImpact(
+        foodName: widget.foodName,
+        category: widget.category,
+        portionCount: portionCount,
+        detectedFoodType: detectedFoodType,
+      );
+
+      if (!mounted || result == null) {
+        if (mounted) {
+          setState(() {
+            _isLoadingImpact = false;
+          });
+        }
+        return;
+      }
+
+      setState(() {
+        _impactResult = result;
+        _isLoadingImpact = false;
+      });
+
+      await _persistImpactToFirestore(
+        userId: user.uid,
+        listingId: listingId,
+        result: result,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingImpact = false;
+      });
+    }
+  }
+
+  Future<void> _persistImpactToFirestore({
+    required String userId,
+    required String listingId,
+    required FoodImpactResult result,
+  }) async {
+    try {
+      await _firestore.collection("food_listings").doc(listingId).set(
+        {
+          "impact": {
+            "peopleFed": result.peopleFed,
+            "waterUsedLiters": result.waterUsedLiters,
+            "co2SavedKg": result.co2SavedKg,
+            "educationTip": result.educationTip,
+            "foodType": result.normalizedFoodType,
+            "estimatedWeightKg": result.estimatedWeightKg,
+          },
+        },
+        SetOptions(merge: true),
+      );
+
+      await _firestore.collection("user_impact").doc(userId).set(
+        {
+          "total_food_donated_kg":
+              FieldValue.increment(result.estimatedWeightKg),
+          "total_people_fed": FieldValue.increment(result.peopleFed),
+          "total_water_saved_liters":
+              FieldValue.increment(result.waterUsedLiters),
+          "total_co2_prevented_kg":
+              FieldValue.increment(result.co2SavedKg),
+          "last_updated_at": FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (_) {
+      // Non-critical persistence failure; donation flow should remain unaffected.
+    }
+  }
+
+  int _parsePortionCount(String quantityText) {
+    final match = RegExp(r"\d+").firstMatch(quantityText);
+    if (match == null) return 0;
+    return int.tryParse(match.group(0) ?? "") ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F4EF),
+      backgroundColor: const Color(0xFFF7FAFF),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(22),
@@ -201,7 +307,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
+                    color: Colors.black.withValues(alpha: 0.07),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -225,7 +331,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [Color(0xFFA67C52), Color(0xFF8B5E34)],
+              colors: [Color(0xFF3B82F6), Color(0xFF155EEF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -240,7 +346,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3436),
+            color: Color(0xFF0F1E42),
           ),
         ),
         const SizedBox(height: 10),
@@ -258,17 +364,17 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
         ),
         const SizedBox(height: 24),
         const CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
         ),
       ],
     );
   }
 
   Widget _buildResultBody() {
-    final title = _hasMatch ? "Match Ready" : "Matching Completed";
+    final title = _hasMatch ? "Donation Successful" : "Donation Submitted";
     final subtitle = _hasMatch
-        ? "Your listing was matched to $_matchedNgoName."
-        : "No suitable NGO found for now. Listing remains visible for future matching.";
+        ? "Your donation is live and matched to $_matchedNgoName."
+        : "Your donation was saved successfully and remains open for future NGO matching.";
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -284,7 +390,7 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3436),
+            color: Color(0xFF0F1E42),
           ),
         ),
         const SizedBox(height: 8),
@@ -318,6 +424,41 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
             style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
           ),
         ],
+        if (_isLoadingImpact && _impactResult == null) ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color(0xFF3B82F6),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Preparing your impact insights...",
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_impactResult != null) ...[
+          const SizedBox(height: 18),
+          DonationSuccessImpactCard(
+            peopleFed: _impactResult!.peopleFed,
+            waterUsedLiters: _impactResult!.waterUsedLiters,
+            co2SavedKg: _impactResult!.co2SavedKg,
+            educationTip: _impactResult!.educationTip,
+          ),
+        ],
         const SizedBox(height: 22),
         SizedBox(
           width: double.infinity,
@@ -348,3 +489,4 @@ class _FoodMatchingPageState extends State<FoodMatchingPage> {
     );
   }
 }
+

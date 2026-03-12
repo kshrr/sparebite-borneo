@@ -56,12 +56,12 @@ class _LandingPageState extends State<LandingPage> {
             Positioned(
               top: -80,
               left: -60,
-              child: _blurCircle(const Color(0x33A67C52), 220),
+              child: _blurCircle(appPrimaryGreen.withOpacity(0.08), 220),
             ),
             Positioned(
               bottom: -90,
               right: -70,
-              child: _blurCircle(const Color(0x338B5E34), 240),
+              child: _blurCircle(appAccentCyan.withOpacity(0.06), 240),
             ),
             SafeArea(
               child: Column(
@@ -92,7 +92,8 @@ class _LandingPageState extends State<LandingPage> {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF2D3436),
+                                color: appTextPrimary,
+                                letterSpacing: -0.3,
                               ),
                             ),
                           ],
@@ -102,7 +103,7 @@ class _LandingPageState extends State<LandingPage> {
                           child: const Text(
                             'Skip',
                             style: TextStyle(
-                              color: Color(0xFF5F5F5F),
+                              color: appTextMuted,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -241,18 +242,18 @@ class _IntroCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+            child: Column(
         children: [
           const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: appPrimaryGreenLightBg,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
               data.badge,
-              style: TextStyle(
+              style: const TextStyle(
                 color: appPrimaryGreen,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
@@ -264,7 +265,7 @@ class _IntroCard extends StatelessWidget {
             height: imageHeight,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Image.asset(
+              child: Image.asset(
                 data.imageAsset,
                 fit: BoxFit.contain,
                 errorBuilder: (_, error, stackTrace) => Icon(
@@ -282,10 +283,11 @@ class _IntroCard extends StatelessWidget {
               data.title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 28,
+                fontSize: 26,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF2D3436),
+                color: appTextPrimary,
                 height: 1.15,
+                letterSpacing: -0.3,
               ),
             ),
           ),
@@ -298,7 +300,7 @@ class _IntroCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 height: 1.55,
-                color: Color(0xFF666666),
+                color: appTextMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -309,3 +311,4 @@ class _IntroCard extends StatelessWidget {
     );
   }
 }
+

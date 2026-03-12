@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../app_colors.dart';
+import '../widgets/future_ui.dart';
 import 'my_listings_page.dart';
 import 'upload_food_page.dart';
 import 'login.dart';
@@ -155,116 +156,80 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await loadImpactStats();
-          await loadUserData();
-        },
-        color: const Color(0xFFA67C52),
-        child: CustomScrollView(
-          slivers: [
-            // Premium App Bar
-            SliverAppBar(
-              expandedHeight: 120,
-              floating: false,
-              pinned: true,
-              elevation: 0,
-              backgroundColor: const Color(0xFFA67C52),
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text(
-                  "Sparebite",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
-                ),
-                centerTitle: true,
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFFA67C52),
-                        const Color(0xFF8B5E34),
-                      ],
+      body: FutureBackground(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await loadImpactStats();
+            await loadUserData();
+          },
+          color: appPrimaryGreen,
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 116,
+                floating: false,
+                pinned: true,
+                elevation: 0,
+                backgroundColor: appPrimaryGreen,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: const Text(
+                    "SpareBite",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
+                  centerTitle: true,
+                  background: Container(
+                    decoration: const BoxDecoration(gradient: appHeroGradient),
                   ),
-                  onPressed: () {
-                    // TODO: Navigate to notifications
-                  },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  onPressed: logout,
-                ),
-              ],
-            ),
-
-            // Main Content
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Hero Section with Personalized Greeting
-                    _buildHeroCard(),
-
-                    const SizedBox(height: 24),
-
-                    // Urgent Alerts Section
-                    _buildUrgentAlerts(),
-
-                    const SizedBox(height: 24),
-
-                    // Impact Metrics Section
-                    _buildSectionTitle("Your Impact", Icons.insights),
-                    const SizedBox(height: 16),
-                    _buildImpactMetrics(),
-
-                    const SizedBox(height: 24),
-
-                    // Quick Actions
-                    _buildSectionTitle("Quick Actions", Icons.flash_on),
-                    const SizedBox(height: 16),
-                    _buildQuickActions(),
-
-                    const SizedBox(height: 24),
-
-                    // Recent Activity
-                    _buildSectionTitle("Recent Activity", Icons.history),
-                    const SizedBox(height: 16),
-                    _buildRecentActivity(),
-
-                    const SizedBox(height: 24),
-
-                    // Analytics Section
-                    _buildSectionTitle("Analytics", Icons.analytics),
-                    const SizedBox(height: 16),
-                    _buildAnalytics(),
-
-                    const SizedBox(height: 24),
-
-                    // Achievement Badges (Optional)
-                    _buildAchievements(),
-
-                    const SizedBox(height: 100), // Bottom padding
-                  ],
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_rounded),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout_rounded),
+                    onPressed: logout,
+                  ),
+                ],
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeroCard(),
+                      const SizedBox(height: 16),
+                      _buildUrgentAlerts(),
+                      const SizedBox(height: 22),
+                      _buildSectionTitle("Your Impact", Icons.insights_rounded),
+                      const SizedBox(height: 12),
+                      _buildImpactMetrics(),
+                      const SizedBox(height: 22),
+                      _buildSectionTitle("Quick Actions", Icons.bolt_rounded),
+                      const SizedBox(height: 12),
+                      _buildQuickActions(),
+                      const SizedBox(height: 22),
+                      _buildSectionTitle("Recent Activity", Icons.history_rounded),
+                      const SizedBox(height: 12),
+                      _buildRecentActivity(),
+                      const SizedBox(height: 22),
+                      _buildSectionTitle("Analytics", Icons.analytics_rounded),
+                      const SizedBox(height: 12),
+                      _buildAnalytics(),
+                      const SizedBox(height: 22),
+                      _buildAchievements(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -275,86 +240,83 @@ class _DashboardState extends State<Dashboard> {
     final userName = userEmail.split('@').first;
     final greeting = _getGreeting();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFA67C52),
-            Color(0xFF8B5E34),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return FutureCard(
+      padding: const EdgeInsets.all(0),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: appHeroGradient,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: appPrimaryGreen.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "$greeting, ${userName.capitalize()}!",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Together, we're making a difference",
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-              _buildNGOStatusBadge(),
-            ],
-          ),
-          const SizedBox(height: 20),
-          if (isLoadingStats)
-            const SizedBox(
-              height: 40,
-              child: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            )
-          else
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
                 Expanded(
-                  child: _buildMiniStat(
-                    "${impactStats['totalDonations'] ?? 0}",
-                    "Total Donations",
-                    Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "$greeting, ${userName.capitalize()}",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        "Future-ready food rescue intelligence",
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
                   ),
                 ),
-                Container(width: 1, height: 30, color: Colors.white30),
-                Expanded(
-                  child: _buildMiniStat(
-                    "${impactStats['totalMeals'] ?? 0}",
-                    "Meals Saved",
-                    Colors.white,
-                  ),
-                ),
+                _buildNGOStatusBadge(),
               ],
             ),
-        ],
+            const SizedBox(height: 16),
+            if (isLoadingStats)
+              const SizedBox(
+                height: 36,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMiniStat(
+                      "${impactStats['totalDonations'] ?? 0}",
+                      "Donations",
+                      Colors.white,
+                    ),
+                  ),
+                  Container(width: 1, height: 30, color: Colors.white30),
+                  Expanded(
+                    child: _buildMiniStat(
+                      "${impactStats['totalMeals'] ?? 0}",
+                      "Meals Saved",
+                      Colors.white,
+                    ),
+                  ),
+                  Container(width: 1, height: 30, color: Colors.white30),
+                  Expanded(
+                    child: _buildMiniStat(
+                      "${impactStats['successRate'] ?? 0}%",
+                      "Success",
+                      Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -459,53 +421,73 @@ class _DashboardState extends State<Dashboard> {
           return const SizedBox.shrink();
         }
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.red[50],
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.red[200]!),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.red[100],
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.warning, color: Colors.red, size: 24),
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyListingsPage()),
+              );
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.red.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Urgent: Food Expiring Soon",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.red,
-                      ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      shape: BoxShape.circle,
                     ),
-                    Text(
-                      "${urgentListings.length} donation${urgentListings.length > 1 ? 's' : ''} need attention",
-                      style: TextStyle(fontSize: 12, color: Colors.red[700]),
+                    child: Icon(Icons.warning_rounded, color: Colors.red.shade700, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Urgent: Food Expiring Soon",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${urgentListings.length} donation${urgentListings.length > 1 ? 's' : ''} need attention",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.red.shade700,
+                    size: 22,
+                  ),
+                ],
               ),
-              IconButton(
-                icon: const Icon(Icons.arrow_forward, color: Colors.red),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MyListingsPage()),
-                  );
-                },
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -514,27 +496,7 @@ class _DashboardState extends State<Dashboard> {
 
   // ---------------- SECTION TITLE ----------------
   Widget _buildSectionTitle(String title, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFA67C52).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: const Color(0xFFA67C52), size: 20),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3436),
-          ),
-        ),
-      ],
-    );
+    return FutureSectionHeader(title: title, icon: icon);
   }
 
   // ---------------- IMPACT METRICS ----------------
@@ -542,7 +504,7 @@ class _DashboardState extends State<Dashboard> {
     if (isLoadingStats) {
       return const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
+          valueColor: AlwaysStoppedAnimation<Color>(appPrimaryGreen),
         ),
       );
     }
@@ -553,7 +515,7 @@ class _DashboardState extends State<Dashboard> {
           children: [
             Expanded(
               child: _buildMetricCard(
-                icon: Icons.restaurant,
+                icon: Icons.restaurant_rounded,
                 value: "${impactStats['totalMeals'] ?? 0}",
                 label: "Meals Saved",
                 color: appPrimaryGreen,
@@ -564,10 +526,10 @@ class _DashboardState extends State<Dashboard> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildMetricCard(
-                icon: Icons.eco,
+                icon: Icons.eco_rounded,
                 value: "${impactStats['totalCO2']?.toStringAsFixed(1) ?? '0'}",
                 label: "CO2 Saved (kg)",
-                color: Colors.blue,
+                color: appAccentCyan,
                 subtitle: "Environmental impact",
               ),
             ),
@@ -578,20 +540,20 @@ class _DashboardState extends State<Dashboard> {
           children: [
             Expanded(
               child: _buildMetricCard(
-                icon: Icons.inventory_2,
+                icon: Icons.inventory_2_rounded,
                 value: "${impactStats['totalDonations'] ?? 0}",
                 label: "Total Donations",
-                color: Colors.orange,
+                color: appAccentWarm,
                 subtitle: "All time",
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildMetricCard(
-                icon: Icons.check_circle,
+                icon: Icons.check_circle_rounded,
                 value: "${impactStats['successRate'] ?? 0}%",
                 label: "Success Rate",
-                color: Colors.purple,
+                color: appPrimaryGreenLight,
                 subtitle: "Completed matches",
               ),
             ),
@@ -609,14 +571,15 @@ class _DashboardState extends State<Dashboard> {
     String? subtitle,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: appCardBg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: appPrimaryGreen.withOpacity(0.06)),
         boxShadow: [
           BoxShadow(
-            blurRadius: 12,
-            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14,
+            color: appPrimaryGreen.withOpacity(0.06),
             offset: const Offset(0, 4),
           ),
         ],
@@ -627,18 +590,19 @@ class _DashboardState extends State<Dashboard> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(height: 12),
           Text(
             value,
             style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
               color: color,
+              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: 4),
@@ -647,14 +611,14 @@ class _DashboardState extends State<Dashboard> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF2D3436),
+              color: appTextPrimary,
             ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: const TextStyle(fontSize: 11, color: appTextMuted),
             ),
           ],
         ],
@@ -673,7 +637,7 @@ class _DashboardState extends State<Dashboard> {
       childAspectRatio: 1.2,
       children: [
         _buildActionCard(
-          icon: Icons.add_circle_outline,
+          icon: Icons.add_circle_rounded,
           title: "Donate Food",
           color: appPrimaryGreen,
           onTap: () {
@@ -684,9 +648,9 @@ class _DashboardState extends State<Dashboard> {
           },
         ),
         _buildActionCard(
-          icon: Icons.inventory_2_outlined,
+          icon: Icons.inventory_2_rounded,
           title: "My Donations",
-          color: Colors.blue,
+          color: appPrimaryGreenLight,
           onTap: () {
             Navigator.push(
               context,
@@ -695,20 +659,19 @@ class _DashboardState extends State<Dashboard> {
           },
         ),
         _buildActionCard(
-          icon: Icons.search,
+          icon: Icons.search_rounded,
           title: "Browse Food",
-          color: Colors.orange,
+          color: appAccentCyan,
           onTap: () {
-            // TODO: Navigate to browse page
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text("Coming soon!")));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Coming soon!")),
+            );
           },
         ),
         _buildActionCard(
           icon: ngoStatus == "none"
-              ? Icons.volunteer_activism
-              : Icons.verified_user,
+              ? Icons.volunteer_activism_rounded
+              : Icons.verified_user_rounded,
           title: ngoStatus == "none" ? "Apply as NGO" : "NGO Status",
           color: appPrimaryGreen,
           onTap: ngoStatus == "none" ? applyAsNGO : null,
@@ -723,41 +686,58 @@ class _DashboardState extends State<Dashboard> {
     required Color color,
     required VoidCallback? onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-              color: Colors.black.withOpacity(0.05),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: appCardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: appPrimaryGreen.withOpacity(0.06)),
+            boxShadow: [
+              BoxShadow(
+                color: appPrimaryGreen.withOpacity(0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: appTextPrimary,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -776,7 +756,7 @@ class _DashboardState extends State<Dashboard> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
+              valueColor: AlwaysStoppedAnimation<Color>(appPrimaryGreen),
             ),
           );
         }
@@ -789,11 +769,9 @@ class _DashboardState extends State<Dashboard> {
 
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(blurRadius: 12, color: Colors.black.withOpacity(0.05)),
-            ],
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: appPrimaryGreen.withOpacity(0.08)),
           ),
           child: Column(
             children: activities.asMap().entries.map((entry) {
@@ -851,8 +829,8 @@ class _DashboardState extends State<Dashboard> {
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           subtitle: Text(
-            "$action • $timeAgo",
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            "$action - $timeAgo",
+            style: const TextStyle(fontSize: 12, color: appTextMuted),
           ),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -886,17 +864,13 @@ class _DashboardState extends State<Dashboard> {
           BoxShadow(blurRadius: 12, color: Colors.black.withOpacity(0.05)),
         ],
       ),
-      child: Column(
-        children: [
-          Icon(Icons.history, size: 48, color: Colors.grey[400]),
+          child: Column(
+            children: [
+              Icon(Icons.history, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 12),
           Text(
             "No activity yet",
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
+              style: const TextStyle(fontSize: 16, color: appTextMuted, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
@@ -918,11 +892,9 @@ class _DashboardState extends State<Dashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(blurRadius: 12, color: Colors.black.withOpacity(0.05)),
-        ],
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: appPrimaryGreen.withOpacity(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

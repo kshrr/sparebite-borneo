@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../app_colors.dart';
+import '../widgets/future_ui.dart';
+import 'donation_detail_screen.dart';
 import '../services/ngo_matching_service.dart';
 
 class MyListingsPage extends StatefulWidget {
@@ -20,96 +22,94 @@ class _MyListingsPageState extends State<MyListingsPage> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("food_listings")
-            .where("donorId", isEqualTo: uid)
-            .orderBy("createdAt", descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
-              ),
-            );
-          }
+      body: FutureBackground(
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection("food_listings")
+              .where("donorId", isEqualTo: uid)
+              .orderBy("createdAt", descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(appPrimaryGreen),
+                ),
+              );
+            }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Something went wrong",
-                    style: TextStyle(fontSize: 18, color: Colors.grey[700]),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          final allListings = snapshot.data!.docs;
-          final filteredListings = _selectedFilter == "all"
-              ? allListings
-              : allListings.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return data["status"] == _selectedFilter;
-                }).toList();
-
-          // Calculate statistics
-          final stats = _calculateStats(allListings);
-
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                title: const Text("My Listings"),
-                centerTitle: true,
-                backgroundColor: appPrimaryGreen,
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
-
-              // Stats card below app bar
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Something went wrong",
+                      style: TextStyle(fontSize: 18, color: Colors.grey[700]),
                     ),
-                    child: Padding(
+                  ],
+                ),
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            final allListings = snapshot.data!.docs;
+            final filteredListings = _selectedFilter == "all"
+                ? allListings
+                : allListings.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return data["status"] == _selectedFilter;
+                  }).toList();
+
+            // Calculate statistics
+            final stats = _calculateStats(allListings);
+
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 0,
+                  floating: true,
+                  pinned: true,
+                  title: const Text("My Listings"),
+                  centerTitle: true,
+                  backgroundColor: appSurface,
+                  foregroundColor: appTextPrimary,
+                  elevation: 0,
+                ),
+
+                // Stats card below app bar
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: FutureCard(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 20,
-                        horizontal: 16,
+                        vertical: 16,
+                        horizontal: 12,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _buildStatCard(
-                            icon: Icons.inventory_2,
+                            icon: Icons.inventory_2_rounded,
                             value: "${stats['total']}",
                             label: "Total",
                             forCard: true,
                           ),
                           _buildStatCard(
-                            icon: Icons.pending_actions,
+                            icon: Icons.pending_actions_rounded,
                             value: "${stats['pending']}",
                             label: "Pending",
                             forCard: true,
                           ),
                           _buildStatCard(
-                            icon: Icons.check_circle,
-                            value: "${stats['completed']}",
-                            label: "Completed",
+                            icon: Icons.check_circle_rounded,
+                            value: "${stats['delivered']}",
+                            label: "Delivered",
                             forCard: true,
                           ),
                         ],
@@ -117,81 +117,95 @@ class _MyListingsPageState extends State<MyListingsPage> {
                     ),
                   ),
                 ),
-              ),
 
-              // Filter Chips
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        _buildFilterChip("all", "All", Icons.list),
-                        const SizedBox(width: 12),
-                        _buildFilterChip("pending", "Pending", Icons.pending),
-                        const SizedBox(width: 12),
-                        _buildFilterChip(
-                          "assigned",
-                          "Assigned",
-                          Icons.assignment,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildFilterChip(
-                          "completed",
-                          "Completed",
-                          Icons.check_circle,
-                        ),
-                      ],
+                // Filter Chips
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
                     ),
-                  ),
-                ),
-              ),
-
-              // Listings Grid
-              if (filteredListings.isEmpty)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.filter_alt_off,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "No listings found for this filter",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            "all",
+                            "All",
+                            Icons.grid_view_rounded,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          _buildFilterChip(
+                            "pending",
+                            "Pending",
+                            Icons.schedule_rounded,
+                          ),
+                          const SizedBox(width: 10),
+                          _buildFilterChip(
+                            "assigned",
+                            "Assigned",
+                            Icons.assignment_rounded,
+                          ),
+                          const SizedBox(width: 10),
+                          _buildFilterChip(
+                            "delivered",
+                            "Delivered",
+                            Icons.check_circle_rounded,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.all(20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final data =
-                          filteredListings[index].data()
-                              as Map<String, dynamic>;
-                      final docId = filteredListings[index].id;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: PremiumListingCard(data: data, docId: docId),
-                      );
-                    }, childCount: filteredListings.length),
-                  ),
                 ),
-            ],
-          );
-        },
+
+                // Listings Grid
+                if (filteredListings.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.filter_alt_off_rounded,
+                            size: 56,
+                            color: appTextMuted,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "No listings found for this filter",
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: appTextMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final data =
+                            filteredListings[index].data()
+                                as Map<String, dynamic>;
+                        final docId = filteredListings[index].id;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: PremiumListingCard(data: data, docId: docId),
+                        );
+                      }, childCount: filteredListings.length),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -206,23 +220,31 @@ class _MyListingsPageState extends State<MyListingsPage> {
       return Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: appPrimaryGreenLightBg,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: appPrimaryGreen, size: 24),
+            child: Icon(icon, color: appPrimaryGreen, size: 22),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             value,
             style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+              color: appTextPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
           ),
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: appTextMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       );
     }
@@ -259,20 +281,28 @@ class _MyListingsPageState extends State<MyListingsPage> {
       selected: isSelected,
       label: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [Icon(icon, size: 16), const SizedBox(width: 6), Text(label)],
+        children: [
+          Icon(icon, size: 16, color: isSelected ? Colors.white : appTextMuted),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
       ),
       onSelected: (selected) {
-        setState(() {
-          _selectedFilter = value;
-        });
+        setState(() => _selectedFilter = value);
       },
-      selectedColor: const Color(0xFFA67C52),
+      selectedColor: appPrimaryGreen,
+      backgroundColor: appCardBg,
       checkmarkColor: Colors.white,
+      side: BorderSide(
+        color: isSelected ? appPrimaryGreen : appPrimaryGreen.withOpacity(0.15),
+      ),
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.grey[700],
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected ? Colors.white : appTextPrimary,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 13,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -280,7 +310,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
     int total = listings.length;
     int pending = 0;
     int assigned = 0;
-    int completed = 0;
+    int delivered = 0;
 
     for (var listing in listings) {
       final data = listing.data() as Map<String, dynamic>;
@@ -292,8 +322,8 @@ class _MyListingsPageState extends State<MyListingsPage> {
         case "assigned":
           assigned++;
           break;
-        case "completed":
-          completed++;
+        case "delivered":
+          delivered++;
           break;
       }
     }
@@ -302,51 +332,291 @@ class _MyListingsPageState extends State<MyListingsPage> {
       'total': total,
       'pending': pending,
       'assigned': assigned,
-      'completed': completed,
+      'delivered': delivered,
     };
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFA67C52).withOpacity(0.1),
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: appPrimaryGreenLightBg,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.inventory_2_rounded,
+                size: 56,
+                color: appPrimaryGreen,
+              ),
             ),
-            child: const Icon(
-              Icons.inventory_2_outlined,
-              size: 80,
-              color: Color(0xFFA67C52),
+            const SizedBox(height: 20),
+            const Text(
+              "No Listings Yet",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: appTextPrimary,
+                letterSpacing: -0.3,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "No Listings Yet",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D3436),
+            const SizedBox(height: 8),
+            Text(
+              "Start making a difference!\nUpload your first food donation.",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: appTextMuted, height: 1.5),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Start making a difference!\nUpload your first food donation.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-              height: 1.5,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
+// ——— Compact listing card (grid tile with image + "Show details") ———
+
+class CompactListingCard extends StatelessWidget {
+  const CompactListingCard({
+    super.key,
+    required this.data,
+    required this.docId,
+  });
+
+  final Map<String, dynamic> data;
+  final String docId;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = (data["status"] ?? "pending").toString();
+    final foodName = data["foodName"] ?? "Unknown Food";
+    final quantity = data["quantity"] ?? "-";
+    final location = data["location"] ?? "-";
+    final expiryTime = data["expiryTime"] != null
+        ? (data["expiryTime"] as Timestamp).toDate()
+        : null;
+    final isUrgent =
+        expiryTime != null &&
+        expiryTime.isBefore(DateTime.now().add(const Duration(days: 1)));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openDetails(context),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: appCardBg,
+            border: Border.all(color: appPrimaryGreen.withOpacity(0.06)),
+            boxShadow: [
+              BoxShadow(
+                color: appPrimaryGreen.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image — dominant, easy to scan
+                Expanded(
+                  flex: 5,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        color: appPrimaryGreenLightBg,
+                        child: data["imageBase64"] != null
+                            ? Image.memory(
+                                base64Decode(data["imageBase64"]),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _placeholderIcon(),
+                              )
+                            : _placeholderIcon(),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: _compactStatusChip(status),
+                      ),
+                      if (isUrgent)
+                        Positioned(
+                          left: 8,
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              expiryTime.isBefore(DateTime.now())
+                                  ? "Expired"
+                                  : "Expires soon",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Title + meta
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        foodName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: appTextPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "$quantity • $location",
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: appTextMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                // Show details CTA
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _openDetails(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        side: BorderSide(
+                          color: appPrimaryGreen.withOpacity(0.4),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text("Show details"),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholderIcon() {
+    return const Center(
+      child: Icon(Icons.restaurant_rounded, size: 36, color: appPrimaryGreen),
+    );
+  }
+
+  Widget _compactStatusChip(String status) {
+    final color = _statusColor(status);
+    final label = _statusLabel(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  void _openDetails(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DonationDetailScreen(donationId: docId),
+      ),
+    );
+  }
+
+  static Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case "pending":
+        return Colors.orange;
+      case "assigned":
+      case "accepted":
+        return Colors.blue;
+      case "ready_for_pickup":
+        return Colors.indigo;
+      case "picked_up":
+        return Colors.teal;
+      case "delivered":
+        return appPrimaryGreen;
+      default:
+        return appTextMuted;
+    }
+  }
+
+  static String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case "assigned":
+      case "accepted":
+        return "Accepted";
+      case "ready_for_pickup":
+        return "Ready";
+      case "picked_up":
+        return "Picked";
+      case "delivered":
+      default:
+        return status.toUpperCase();
+    }
+  }
+}
+
+// ——— Full listing card (used on detail or when expanded) ———
 
 class PremiumListingCard extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -410,7 +680,8 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
     final createdAt = data["createdAt"] != null
         ? (data["createdAt"] as Timestamp).toDate()
         : null;
-    final status = data["status"] ?? "pending";
+    final status = (data["status"] ?? "pending").toString();
+    final statusLabel = _displayStatusLabel(status);
     final foodName = data["foodName"] ?? "Unknown Food";
     final quantity = data["quantity"] ?? "-";
     final location = data["location"] ?? "-";
@@ -423,269 +694,290 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
     final canManualRematch =
         status.toString().toLowerCase() == "pending" && matchedNgoId.isNotEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DonationDetailScreen(donationId: widget.docId),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Image Section - 1:1 for full preview
-            AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                children: [
-                  // Food Image
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFFA67C52).withOpacity(0.1),
-                          const Color(0xFF8B5E34).withOpacity(0.1),
-                        ],
-                      ),
-                    ),
-                    child: data["imageBase64"] != null
-                        ? Image.memory(
-                            base64Decode(data["imageBase64"]),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildPlaceholderImage();
-                            },
-                          )
-                        : _buildPlaceholderImage(),
-                  ),
-
-                  // Status Badge
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: _buildStatusBadge(status),
-                  ),
-
-                  // Category Badge
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: _buildCategoryBadge(category),
-                  ),
-
-                  // Expiry Overlay
-                  if (expiryTime != null &&
-                      expiryTime.isBefore(
-                        DateTime.now().add(const Duration(days: 1)),
-                      ))
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.red.withOpacity(0.9),
-                            ],
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.warning,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _getTimeRemaining(expiryTime),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: appCardBg,
+          border: Border.all(color: appPrimaryGreen.withOpacity(0.06)),
+          boxShadow: [
+            BoxShadow(
+              color: appPrimaryGreen.withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image Section — 1:1 square, fixed size to avoid collision
+              SizedBox(
+                width: 200,
+                height: 210,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            appPrimaryGreen.withOpacity(0.12),
+                            appAccentCyan.withOpacity(0.1),
                           ],
                         ),
                       ),
+                      child: data["imageBase64"] != null
+                          ? Image.memory(
+                              base64Decode(data["imageBase64"]),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildPlaceholderImage(),
+                            )
+                          : _buildPlaceholderImage(),
                     ),
-                ],
-              ),
-            ),
-
-            // Details Section - Flexible with proper spacing
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Food Name
-                  Text(
-                    foodName,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3436),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _buildStatusBadge(status),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Main Details Row
-                  Row(
-                    children: [
-                      // Quantity
-                      Expanded(
-                        child: _buildDetailItem(
-                          Icons.scale,
-                          "Quantity",
-                          quantity,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Location
-                      Expanded(
-                        child: _buildDetailItem(
-                          Icons.location_on,
-                          "Location",
-                          location,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Category Row
-                  _buildInfoRow(Icons.category, "Category", category),
-
-                  const SizedBox(height: 12),
-
-                  // Timestamps Row
-                  Row(
-                    children: [
-                      if (createdAt != null)
-                        Expanded(
-                          child: _buildTimestamp(
-                            Icons.calendar_today,
-                            "Posted",
-                            _formatDate(createdAt),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _buildCategoryBadge(category),
+                    ),
+                    if (expiryTime != null &&
+                        expiryTime.isBefore(
+                          DateTime.now().add(const Duration(days: 1)),
+                        ))
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.red.withOpacity(0.9),
+                              ],
+                            ),
+                          ),
+                          child: Text(
+                            _getTimeRemaining(expiryTime),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      if (expiryTime != null) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTimestamp(
-                            Icons.access_time,
-                            "Expires",
-                            _formatDate(expiryTime),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Details Section — all features including Rematch
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        foodName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: appTextPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.scale_rounded,
+                            size: 14,
+                            color: appTextMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              quantity,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: appTextMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 14,
+                            color: appTextMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              location,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: appTextMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildInfoRow(
+                        Icons.category_rounded,
+                        "Category",
+                        category,
+                      ),
+                      if (createdAt != null || expiryTime != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (createdAt != null)
+                              Expanded(
+                                child: _buildTimestamp(
+                                  Icons.calendar_today_rounded,
+                                  "Posted",
+                                  _formatDate(createdAt),
+                                ),
+                              ),
+                            if (expiryTime != null) ...[
+                              if (createdAt != null) const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildTimestamp(
+                                  Icons.access_time_rounded,
+                                  "Expires",
+                                  _formatDate(expiryTime),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                      if (status.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow(
+                          _getStatusIcon(status),
+                          "Status",
+                          statusLabel,
+                          color: _getStatusColor(status),
+                        ),
+                      ],
+                      if ((status.toLowerCase() == "assigned" ||
+                              status.toLowerCase() == "accepted") &&
+                          assignedNgoName.toString().trim().isNotEmpty &&
+                          assignedNgoName != "-") ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow(
+                          Icons.volunteer_activism_rounded,
+                          "Assigned NGO",
+                          assignedNgoName.toString(),
+                          color: appPrimaryGreen,
+                        ),
+                      ],
+                      if (status.toString().toLowerCase() == "pending" &&
+                          assignedNgoName.toString().trim().isNotEmpty &&
+                          assignedNgoName != "-") ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow(
+                          Icons.groups_rounded,
+                          "Matched NGO",
+                          assignedNgoName.toString(),
+                          color: appPrimaryGreen,
+                        ),
+                      ],
+                      if (rejectedNgoCount > 0 ||
+                          matchingState == "rematched_after_reject" ||
+                          matchingState == "no_ngo_after_reject") ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow(
+                          Icons.swap_horiz_rounded,
+                          "Matching Update",
+                          matchingState == "no_ngo_after_reject"
+                              ? "Rejected by $rejectedNgoCount NGO(s). No more NGO available yet."
+                              : "Rejected by $rejectedNgoCount NGO(s). Reassigned to next NGO.",
+                          color: Colors.orange,
+                        ),
+                      ],
+                      if (canManualRematch) ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _isRematching ? null : _handleRematch,
+                            icon: _isRematching
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        appPrimaryGreen,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.swap_horiz_rounded,
+                                    size: 18,
+                                  ),
+                            label: Text(
+                              _isRematching ? "Rematching..." : "Rematch",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: appPrimaryGreen,
+                              side: const BorderSide(color: appPrimaryGreen),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ],
                   ),
-
-                  // Status Info (if not already shown in badge)
-                  if (status.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      _getStatusIcon(status),
-                      "Status",
-                      status.toUpperCase(),
-                      color: _getStatusColor(status),
-                    ),
-                  ],
-                  if (status.toString().toLowerCase() == "assigned" &&
-                      assignedNgoName.toString().trim().isNotEmpty &&
-                      assignedNgoName != "-") ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      Icons.volunteer_activism_rounded,
-                      "Assigned NGO",
-                      assignedNgoName.toString(),
-                      color: appPrimaryGreen,
-                    ),
-                  ],
-                  if (status.toString().toLowerCase() == "pending" &&
-                      assignedNgoName.toString().trim().isNotEmpty &&
-                      assignedNgoName != "-") ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      Icons.groups_rounded,
-                      "Matched NGO",
-                      assignedNgoName.toString(),
-                      color: appPrimaryGreen,
-                    ),
-                  ],
-                  if (rejectedNgoCount > 0 ||
-                      matchingState == "rematched_after_reject" ||
-                      matchingState == "no_ngo_after_reject") ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      Icons.swap_horiz_rounded,
-                      "Matching Update",
-                      matchingState == "no_ngo_after_reject"
-                          ? "Rejected by $rejectedNgoCount NGO(s). No more NGO available yet."
-                          : "Rejected by $rejectedNgoCount NGO(s). Reassigned to next NGO.",
-                      color: Colors.orange,
-                    ),
-                  ],
-                  if (canManualRematch) ...[
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _isRematching ? null : _handleRematch,
-                        icon: _isRematching
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.swap_horiz_rounded),
-                        label: Text(
-                          _isRematching ? "Rematching..." : "Rematch",
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: appPrimaryGreen,
-                          side: BorderSide(color: appPrimaryGreen),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -695,122 +987,66 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
     return Container(
       color: const Color(0xFFEADBC8),
       child: const Center(
-        child: Icon(Icons.fastfood, size: 60, color: Color(0xFFA67C52)),
+        child: Icon(Icons.fastfood, size: 60, color: appPrimaryGreen),
       ),
     );
   }
 
   Widget _buildStatusBadge(String status) {
     final color = _getStatusColor(status);
-    final icon = _getStatusIcon(status);
+    final label = _displayStatusLabel(status).toUpperCase();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 16),
-          const SizedBox(width: 6),
-          Text(
-            status.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }
 
   Widget _buildCategoryBadge(String category) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            _getCategoryIcon(category),
-            size: 14,
-            color: const Color(0xFFA67C52),
-          ),
-          const SizedBox(width: 6),
+          Icon(_getCategoryIcon(category), size: 10, color: appPrimaryGreen),
+          const SizedBox(width: 4),
           Text(
             category,
             style: const TextStyle(
-              color: Color(0xFF2D3436),
-              fontSize: 12,
+              color: appTextPrimary,
+              fontSize: 9,
               fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(IconData icon, String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFA67C52).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: const Color(0xFFA67C52)),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D3436),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -824,20 +1060,20 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
     Color? color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: (color ?? const Color(0xFFA67C52)).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: (color ?? appPrimaryGreen).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color ?? const Color(0xFFA67C52)),
-          const SizedBox(width: 10),
+          Icon(icon, size: 14, color: color ?? appPrimaryGreen),
+          const SizedBox(width: 6),
           Text(
             "$label: ",
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[600],
+            style: const TextStyle(
+              fontSize: 11,
+              color: appTextMuted,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -845,9 +1081,9 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: color ?? const Color(0xFF2D3436),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color ?? appTextPrimary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -860,15 +1096,15 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
 
   Widget _buildTimestamp(IconData icon, String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(10),
+        color: appPrimaryGreenLightBg.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 8),
+          Icon(icon, size: 12, color: appTextMuted),
+          const SizedBox(width: 6),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,19 +1112,18 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[600],
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: appTextMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: appTextPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -952,8 +1187,13 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
       case "pending":
         return Colors.orange;
       case "assigned":
+      case "accepted":
         return Colors.blue;
-      case "completed":
+      case "ready_for_pickup":
+        return Colors.indigo;
+      case "picked_up":
+        return Colors.teal;
+      case "delivered":
         return appPrimaryGreen;
       default:
         return Colors.grey;
@@ -965,11 +1205,32 @@ class _PremiumListingCardState extends State<PremiumListingCard> {
       case "pending":
         return Icons.pending;
       case "assigned":
+      case "accepted":
         return Icons.assignment;
-      case "completed":
-        return Icons.check_circle;
+      case "ready_for_pickup":
+        return Icons.inventory_2_outlined;
+      case "picked_up":
+        return Icons.local_shipping;
+      case "delivered":
+        return Icons.done_all;
       default:
         return Icons.help_outline;
+    }
+  }
+
+  String _displayStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case "assigned":
+      case "accepted":
+        return "Accepted";
+      case "ready_for_pickup":
+        return "Ready for Pickup";
+      case "picked_up":
+        return "Picked Up";
+      case "delivered":
+        return "Delivered";
+      default:
+        return status.toUpperCase();
     }
   }
 

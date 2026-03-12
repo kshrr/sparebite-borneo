@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../app_colors.dart';
+import '../widgets/future_ui.dart';
 import 'food_matching_page.dart';
 import 'map_picker_page.dart';
 
@@ -143,7 +144,7 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Food uploaded and sent for NGO matching"),
-            backgroundColor: Color(0xFF8B5E34),
+            backgroundColor: appPrimaryGreen,
           ),
         );
         final nav = Navigator.of(context);
@@ -192,50 +193,50 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F4EF),
+      backgroundColor: appSurface,
       appBar: AppBar(
         title: const Text("Upload Food"),
         backgroundColor: appPrimaryGreen,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFA67C52), Color(0xFF8B5E34)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: FutureBackground(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FutureCard(
+                  padding: const EdgeInsets.all(0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: appHeroGradient,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Post Surplus Food",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "Smart matching will assign the best NGO by capacity and distance.",
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Post Surplus Food",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Once submitted, our AI matcher picks the best NGO by capacity and service distance.",
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 16),
               _buildImagePicker(),
               const SizedBox(height: 14),
@@ -351,7 +352,7 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
                           style: TextStyle(
                             color: expiryTime == null
                                 ? Colors.grey.shade600
-                                : const Color(0xFF2D3436),
+                                : appTextPrimary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -390,7 +391,8 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
                 ),
               ),
               const SizedBox(height: 30),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -404,9 +406,16 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
         height: 210,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade300),
+          color: Colors.white.withOpacity(0.94),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: appPrimaryGreen.withOpacity(0.18)),
+          boxShadow: [
+            BoxShadow(
+              color: appPrimaryGreen.withOpacity(0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: (imageFile == null && webImage == null)
             ? Column(
@@ -430,7 +439,7 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
                     "Upload Food Photo",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3436),
+                      color: appTextPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -483,7 +492,7 @@ class _UploadFoodPageState extends State<UploadFoodPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFA67C52), width: 2),
+        borderSide: const BorderSide(color: appPrimaryGreen, width: 2),
       ),
     );
   }

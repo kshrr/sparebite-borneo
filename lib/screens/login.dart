@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:food_rescue/screens/main_navigation.dart';
 
+import '../app_colors.dart';
+
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
 
@@ -76,44 +78,42 @@ class _AuthPageState extends State<AuthPage>
     return Scaffold(
       body: Stack(
         children: [
-          // Background Image with Overlay
+          // Background with premium gradient
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFFA67C52).withOpacity(0.95),
-                  const Color(0xFF9C7045).withOpacity(0.95),
-                  const Color(0xFF8B5E34).withOpacity(0.95),
+                  appPrimaryGreen,
+                  appPrimaryGreenLight,
+                  appAccentCyan,
                 ],
-                stops: const [0.0, 0.5, 1.0],
+                stops: [0.0, 0.5, 1.0],
               ),
             ),
             child: Stack(
               children: [
-                // Background Image from Unsplash
                 Positioned.fill(
                   child: Image.network(
                     'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
                     fit: BoxFit.cover,
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withOpacity(0.25),
                     colorBlendMode: BlendMode.darken,
                     errorBuilder: (context, error, stackTrace) {
-                      return Container(); // Fallback to gradient if image fails
+                      return Container();
                     },
                   ),
                 ),
-                // Gradient Overlay
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        const Color(0xFFA67C52).withOpacity(0.85),
-                        const Color(0xFF9C7045).withOpacity(0.90),
-                        const Color(0xFF8B5E34).withOpacity(0.95),
+                        appPrimaryGreen.withOpacity(0.88),
+                        appPrimaryGreenLight.withOpacity(0.92),
+                        appAccentCyan.withOpacity(0.9),
                       ],
                     ),
                   ),
@@ -214,7 +214,7 @@ class _AuthPageState extends State<AuthPage>
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                    color: const Color(0xFFA67C52),
+                    color: appPrimaryGreen,
                     child: Icon(
                       Icons.restaurant_menu_rounded,
                       size: logoSize * 0.5,
@@ -225,7 +225,7 @@ class _AuthPageState extends State<AuthPage>
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
                   return Container(
-                    color: const Color(0xFFA67C52),
+                    color: appPrimaryGreen,
                     child: const Center(
                       child: CircularProgressIndicator(
                         color: Colors.white,
@@ -326,12 +326,12 @@ class _AuthPageState extends State<AuthPage>
                   width: iconSize,
                   height: iconSize,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFA67C52).withOpacity(0.1),
+                    color: appPrimaryGreenLightBg,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.fastfood_rounded,
-                    color: const Color(0xFFA67C52),
+                    color: appPrimaryGreen,
                     size: iconSize * 0.5,
                   ),
                 ),
@@ -344,8 +344,8 @@ class _AuthPageState extends State<AuthPage>
                 isLogin ? "Welcome Back" : "Create Account",
                 style: TextStyle(
                   fontSize: titleSize,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1A1A1A),
+                  fontWeight: FontWeight.w800,
+                  color: appTextPrimary,
                   letterSpacing: -0.3,
                 ),
                 textAlign: TextAlign.center,
@@ -359,8 +359,8 @@ class _AuthPageState extends State<AuthPage>
                     : "Start making a difference today",
                 style: TextStyle(
                   fontSize: subtitleSize,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w400,
+                  color: appTextMuted,
+                  fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -400,7 +400,7 @@ class _AuthPageState extends State<AuthPage>
               // Divider
               Row(
                 children: [
-                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Expanded(child: Divider(color: appPrimaryGreen.withOpacity(0.2))),
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: isVerySmallScreen ? 12.0 : 16.0,
@@ -408,13 +408,13 @@ class _AuthPageState extends State<AuthPage>
                     child: Text(
                       "OR",
                       style: TextStyle(
-                        color: Colors.grey[500],
+                        color: appTextMuted,
                         fontSize: isVerySmallScreen ? 11.0 : 12.0,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Expanded(child: Divider(color: appPrimaryGreen.withOpacity(0.2))),
                 ],
               ),
 
@@ -449,29 +449,29 @@ class _AuthPageState extends State<AuthPage>
       style: TextStyle(
         fontSize: fontSize,
         fontWeight: FontWeight.w500,
-        color: const Color(0xFF1A1A1A),
+        color: appTextPrimary,
       ),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: Colors.grey[600],
+          color: appTextMuted,
           fontSize: labelSize,
-          fontWeight: FontWeight.w400,
+          fontWeight: FontWeight.w500,
         ),
-        prefixIcon: Icon(icon, color: const Color(0xFFA67C52)),
+        prefixIcon: Icon(icon, color: appPrimaryGreen),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: appSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: appPrimaryGreen.withOpacity(0.2)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: appPrimaryGreen.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: const BorderSide(color: Color(0xFFA67C52), width: 2),
+          borderSide: const BorderSide(color: appPrimaryGreen, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -510,38 +510,38 @@ class _AuthPageState extends State<AuthPage>
       style: TextStyle(
         fontSize: fontSize,
         fontWeight: FontWeight.w500,
-        color: const Color(0xFF1A1A1A),
+        color: appTextPrimary,
       ),
       decoration: InputDecoration(
         labelText: "Password",
         labelStyle: TextStyle(
-          color: Colors.grey[600],
+          color: appTextMuted,
           fontSize: labelSize,
-          fontWeight: FontWeight.w400,
+          fontWeight: FontWeight.w500,
         ),
-        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFA67C52)),
+        prefixIcon: Icon(Icons.lock_outline_rounded, color: appPrimaryGreen),
         suffixIcon: IconButton(
           icon: Icon(
-            isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey[600],
+            isPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            color: appTextMuted,
           ),
           onPressed: () {
             setState(() => isPasswordVisible = !isPasswordVisible);
           },
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: appSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: appPrimaryGreen.withOpacity(0.2)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: appPrimaryGreen.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: const BorderSide(color: Color(0xFFA67C52), width: 2),
+          borderSide: const BorderSide(color: appPrimaryGreen, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -568,16 +568,12 @@ class _AuthPageState extends State<AuthPage>
       height: buttonHeight,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFA67C52), Color(0xFF9C7045)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: appHeroGradient,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFA67C52).withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: appPrimaryGreen.withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -627,7 +623,7 @@ class _AuthPageState extends State<AuthPage>
         Flexible(
           child: Text(
             isLogin ? "Don't have an account? " : "Already have an account? ",
-            style: TextStyle(color: Colors.grey[600], fontSize: fontSize),
+            style: TextStyle(color: appTextMuted, fontSize: fontSize),
             textAlign: TextAlign.center,
           ),
         ),
@@ -641,9 +637,9 @@ class _AuthPageState extends State<AuthPage>
           child: Text(
             isLogin ? "Sign Up" : "Sign In",
             style: TextStyle(
-              color: const Color(0xFFA67C52),
+              color: appPrimaryGreen,
               fontSize: fontSize,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -735,4 +731,5 @@ class _AuthPageState extends State<AuthPage>
     );
   }
 }
+
 

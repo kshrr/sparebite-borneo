@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../app_colors.dart';
 import 'dashboard.dart';
 import 'impact_page.dart';
+import 'my_impact_dashboard.dart';
 import 'my_listings_page.dart';
 import 'ngo_dashboard.dart';
 import 'profile_page.dart';
@@ -28,7 +29,7 @@ class _MainNavigationState extends State<MainNavigation> {
     Dashboard(),
     MyListingsPage(),
     UploadFoodPage(),
-    ImpactPage(),
+    MyImpactDashboard(),
     ProfilePage(),
   ];
 
@@ -89,7 +90,7 @@ class _MainNavigationState extends State<MainNavigation> {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA67C52)),
+            valueColor: AlwaysStoppedAnimation<Color>(appPrimaryGreen),
           ),
         ),
       );
@@ -102,33 +103,46 @@ class _MainNavigationState extends State<MainNavigation> {
       floatingActionButton: isNgoUser
           ? null
           : FloatingActionButton(
+              elevation: 2,
               backgroundColor: appPrimaryGreen,
               onPressed: () => onTabTapped(2),
-              child: const Icon(Icons.add, color: Colors.white),
+              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
             ),
       floatingActionButtonLocation: isNgoUser
           ? FloatingActionButtonLocation.endFloat
           : FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: isNgoUser ? null : const CircularNotchedRectangle(),
-        notchMargin: isNgoUser ? 0 : 8,
-        child: SizedBox(
-          height: 65,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: isNgoUser
-                ? [
-                    navItem(Icons.volunteer_activism_outlined, "NGO", 0),
-                    navItem(Icons.bar_chart_outlined, "Impact", 1),
-                    navItem(Icons.person_outline, "Profile", 2),
-                  ]
-                : [
-                    navItem(Icons.dashboard_outlined, "Home", 0),
-                    navItem(Icons.inventory_2_outlined, "Listings", 1),
-                    const SizedBox(width: 40),
-                    navItem(Icons.bar_chart_outlined, "Impact", 3),
-                    navItem(Icons.person_outline, "Profile", 4),
-                  ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: appCardBg,
+          boxShadow: [
+            BoxShadow(
+              color: appPrimaryGreen.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 68,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: isNgoUser
+                  ? [
+                      navItem(Icons.volunteer_activism_rounded, "NGO", 0),
+                      navItem(Icons.bar_chart_rounded, "Impact", 1),
+                      navItem(Icons.person_rounded, "Profile", 2),
+                    ]
+                  : [
+                      navItem(Icons.home_rounded, "Home", 0),
+                      navItem(Icons.inventory_2_rounded, "Listings", 1),
+                      const SizedBox(width: 48),
+                      navItem(Icons.bar_chart_rounded, "Impact", 3),
+                      navItem(Icons.person_rounded, "Profile", 4),
+                    ],
+            ),
           ),
         ),
       ),
@@ -140,18 +154,32 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return GestureDetector(
       onTap: () => onTabTapped(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? appPrimaryGreen : Colors.grey),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? appPrimaryGreen : Colors.grey,
-              fontSize: 12,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? appPrimaryGreenLightBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: isActive ? appPrimaryGreen : appTextMuted,
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? appPrimaryGreen : appTextMuted,
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

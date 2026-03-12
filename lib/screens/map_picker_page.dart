@@ -89,7 +89,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                         : "Lat: ${_selected!.latitude.toStringAsFixed(6)}, Lng: ${_selected!.longitude.toStringAsFixed(6)}",
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D3436),
+                      color: Color(0xFF0F1E42),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -128,3 +128,4 @@ class _MapPickerPageState extends State<MapPickerPage> {
     );
   }
 }
+
