@@ -3,6 +3,9 @@
 ## Overview
 SpareBite is an AI-powered food redistribution platform that connects surplus food donors with NGOs in real-time using geolocation and Gemini AI matching.
 
+## Demo Video
+https://youtu.be/c98eOtBcQH0
+
 ## Tech Stack
 - Flutter
 - Firebase Authentication
